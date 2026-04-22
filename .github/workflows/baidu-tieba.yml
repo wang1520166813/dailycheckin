@@ -1,0 +1,52 @@
+name: Baidu Tieba Check-in
+
+on:
+  schedule:
+    # 每天北京时间 08:35 (UTC 00:35) 执行，比 B站晚 5 分钟，避免 config.json 冲突
+    - cron: '35 0 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  tieba:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Create config.json for Tieba
+        run: |
+          cat > config.json << 'EOF'
+          {
+            "TIEBA": [
+              {
+                "cookie": "BDUSS=${{ secrets.BDUSS }}; STOKEN=${{ secrets.STOKEN }}; BAIDUID=${{ secrets.BAIDUID }}; TIEBAUID=${{ secrets.TIEBAUID }}; BAIDU_WISE_UID=${{ secrets.BAIDU_WISE_UID }}; __bid_n=${{ secrets.BID_N }}; __ymg_scsc=${{ secrets.YMG_SCSC }}; ab_sr=${{ secrets.AB_SR }}; BAIDUID_BFESS=${{ secrets.BAIDUID_BFESS }}; BDUSS_BFESS=${{ secrets.BDUSS_BFESS }}; RT=${{ secrets.RT }}; Hm_lpvt_049d6c0ca81a94ed2a9b8ae61b3553a5=${{ secrets.HM_LPVT }}; Hm_lvt_049d6c0ca81a94ed2a9b8ae61b3553a5=${{ secrets.HM_LVT }}; HMACCOUNT=${{ secrets.HMACCOUNT }}; IS_NEW_USER=${{ secrets.IS_NEW_USER }}; st_data=${{ secrets.ST_DATA }}; st_key_id=${{ secrets.ST_KEY_ID }}; st_sign=${{ secrets.ST_SIGN }}; TIEBA_NEW_PC=${{ secrets.TIEBA_NEW_PC }}; TIEBA_SID=${{ secrets.TIEBA_SID }}; USER_JUMP=${{ secrets.USER_JUMP }}",
+                "tbs": ""
+              }
+            ]
+          }
+          EOF
+          echo "Tieba Config created:"
+          cat config.json
+
+      - name: Run Tieba Check-in
+        run: |
+          dailycheckin --include TIEBA
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tieba-logs
+          path: logs/
