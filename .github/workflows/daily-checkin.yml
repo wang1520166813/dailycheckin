@@ -26,7 +26,8 @@ jobs:
 
       - name: Create config.json
         run: |
-          echo '{
+          cat > config.json << 'EOF'
+          {
             "BILIBILI": [
               {
                 "cookie": "SESSDATA=${{ secrets.BILI_SESSDATA }}; bili_jct=${{ secrets.BILI_BILI_JCT }}; DedeUserID=${{ secrets.BILI_DedeUserID }}; buvid3=${{ secrets.BILI_buvid3 }}; buvid4=${{ secrets.BILI_buvid4 }}",
@@ -37,13 +38,14 @@ jobs:
                 "silver2coin": false
               }
             ]
-          }' > config.json
+          }
+          EOF
           echo "Config created:"
           cat config.json
 
       - name: Run check-in
         run: |
-          python main.py
+          python dailycheckin/main.py
 
       - name: Upload logs
         if: always()
