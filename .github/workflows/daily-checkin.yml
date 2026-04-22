@@ -24,67 +24,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Prepare Config
+      - name: Create config.json
         run: |
-          python -c "
-import os
-import json
-
-# 读取现有 config
-config_path = 'config.json'
-if os.path.exists(config_path):
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-else:
-    config = {}
-
-# 更新 B 站配置
-if 'BILIBILI' not in config:
-    config['BILIBILI'] = []
-
-# 构建 cookie 字符串
-cookie_parts = []
-if os.getenv('BILI_SESSDATA'):
-    cookie_parts.append(f\"SESSDATA={os.getenv('BILI_SESSDATA')}\")
-if os.getenv('BILI_BILI_JCT'):
-    cookie_parts.append(f\"bili_jct={os.getenv('BILI_BILI_JCT')}\")
-if os.getenv('BILI_DedeUserID'):
-    cookie_parts.append(f\"DedeUserID={os.getenv('BILI_DedeUserID')}\")
-if os.getenv('BILI_buvid3'):
-    cookie_parts.append(f\"buvid3={os.getenv('BILI_buvid3')}\")
-if os.getenv('BILI_buvid4'):
-    cookie_parts.append(f\"buvid4={os.getenv('BILI_buvid4')}\")
-
-# 配置投币策略
-bili_config = {
-    'cookie': '; '.join(cookie_parts),
-    'coin_num': 5,
-    'coin_type': 1,
-    'my_video_bvid': os.getenv('BILI_BV_ID', ''),
-    'coins_to_myself': 2,
-    'silver2coin': False
-}
-
-if len(config['BILIBILI']) > 0:
-    config['BILIBILI'][0] = bili_config
-else:
-    config['BILIBILI'].append(bili_config)
-
-# 写回 config.json
-with open(config_path, 'w', encoding='utf-8') as f:
-    json.dump(config, f, indent=2, ensure_ascii=False)
-
-print('Config updated successfully')
-"
+          cat > config.json << EOF
+          {
+            "BILIBILI": [
+              {
+                "cookie": "SESSDATA=${{ secrets.BILI_SESSDATA }}; bili_jct=${{ secrets.BILI_BILI_JCT }}; DedeUserID=${{ secrets.BILI_DedeUserID }}; buvid3=${{ secrets.BILI_buvid3 }}; buvid4=${{ secrets.BILI_buvid4 }}",
+                "coin_num": 5,
+                "coin_type": 1,
+                "my_video_bvid": "${{ secrets.BILI_BV_ID }}",
+                "coins_to_myself": 2,
+                "silver2coin": false
+              }
+            ]
+          }
+          EOF
+          echo "Config created:"
+          cat config.json
 
       - name: Run check-in
-        env:
-          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
-          BILI_BILI_JCT: ${{ secrets.BILI_BILI_JCT }}
-          BILI_DedeUserID: ${{ secrets.BILI_DedeUserID }}
-          BILI_buvid3: ${{ secrets.BILI_buvid3 }}
-          BILI_buvid4: ${{ secrets.BILI_buvid4 }}
-          BILI_BV_ID: ${{ secrets.BILI_BV_ID }}
         run: |
           python main.py
 
