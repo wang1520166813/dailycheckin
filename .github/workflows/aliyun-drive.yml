@@ -1,0 +1,43 @@
+name: Aliyun Drive Check-in
+
+on:
+  schedule:
+    # 每天北京时间 10:00 (UTC 02:00) 执行，与 B站、贴吧错开
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  aliyun:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Generate Aliyun Config
+        run: |
+          python scripts/create_aliyun_config.py
+        env:
+          ALYUN_DRIVE_COOKIES: ${{ secrets.ALYUN_DRIVE_COOKIES }}
+
+      - name: Run Aliyun Check-in
+        run: |
+          dailycheckin --include ALIYUN
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aliyun-logs
+          path: logs/
