@@ -73,7 +73,7 @@ class BiliBili(CheckIn):
                 msg = f"签到失败，信息为: {ret['message']}"
         except Exception as e:
             msg = f"签到异常，原因为{e!s}"
-            print(msg)
+        print(msg)
         return msg
 
     @staticmethod
@@ -91,7 +91,7 @@ class BiliBili(CheckIn):
                 msg = "今天已经签到过了"
             else:
                 msg = f"签到失败，信息为({ret['msg']})"
-                print(msg)
+            print(msg)
         except Exception as e:
             msg = f"签到异常,原因为: {e!s}"
             print(msg)
@@ -290,12 +290,27 @@ class BiliBili(CheckIn):
         ret = session.post(url=url, data=post_data).json()
         return ret
 
+    @staticmethod
+    def get_video_info(session, bili_jct, bvid: str) -> dict:
+        """
+        获取视频信息 (通过 BV 号获取 aid 和 cid)
+        """
+        url = "https://api.bilibili.com/x/web-interface/view"
+        params = {"bvid": bvid}
+        ret = session.get(url=url, params=params).json()
+        return ret
+
     def main(self):
         bilibili_cookie = {item.split("=")[0]: item.split("=")[1] for item in self.check_item.get("cookie").split("; ")}
         bili_jct = bilibili_cookie.get("bili_jct")
-        coin_num = self.check_item.get("coin_num", 0)
+        coin_num = self.check_item.get("coin_num", 5)
         coin_type = self.check_item.get("coin_type", 1)
         silver2coin = self.check_item.get("silver2coin", False)
+        
+        # 新增：获取自定义投币策略
+        my_video_bvid = self.check_item.get("my_video_bvid", "")  # 例如 "BV1DZonBpE1o"
+        coins_to_myself = self.check_item.get("coins_to_myself", 2)  # 投给自己的数量
+        
         session = requests.session()
         requests.utils.add_dict_to_cookiejar(session.cookies, bilibili_cookie)
         session.headers.update(
@@ -322,6 +337,7 @@ class BiliBili(CheckIn):
                         receive_type=welfare.get("type"),
                     )
                     print(vip_privilege_receive_ret)
+            
             coins_av_count = len(
                 list(
                     filter(
@@ -330,85 +346,124 @@ class BiliBili(CheckIn):
                     )
                 )
             )
-            coin_num = coin_num - coins_av_count
-            coin_num = coin_num if coin_num < coin else coin
-            if coin_type == 1:
-                following_list = self.get_followings(session=session, uid=uid)
-                count = 0
-                for following in following_list.get("data", {}).get("list"):
-                    mid = following.get("mid")
-                    if mid:
-                        tmplist, tmpcount = self.space_arc_search(session=session, uid=mid)
-                        aid_list += tmplist
-                        count += tmpcount
-                        if count > coin_num:
+            
+            # 计算还需要投多少币
+            remaining_coins = coin_num - coins_av_count
+            remaining_coins = remaining_coins if remaining_coins < coin else coin
+            
+            # 策略：先投给自己指定的视频
+            if my_video_bvid and coins_to_myself > 0:
+                print(f"\n🎯 开始投币策略：前 {coins_to_myself} 个投给视频 {my_video_bvid}")
+                video_info = self.get_video_info(session=session, bili_jct=bili_jct, bvid=my_video_bvid)
+                if video_info.get("code") == 0:
+                    aid = video_info["data"]["aid"]
+                    for i in range(coins_to_myself):
+                        if remaining_coins <= 0:
+                            break
+                        ret = self.coin_add(session=session, aid=aid, bili_jct=bili_jct)
+                        if ret.get("code") == 0:
+                            remaining_coins -= 1
+                            success_count += 1
+                            print(f"✅ 成功给《{video_info['data']['title']}》投币 #{i+1}/{coins_to_myself}")
+                        elif ret.get("code") == 34005:
+                            print(f"⚠️ 已投过该视频，跳过")
+                            break
+                        else:
+                            print(f"❌ 投币失败：{ret.get('message')}")
+                            break
+                else:
+                    print(f"⚠️ 无法获取视频信息：{video_info.get('message')}")
+            
+            # 剩余的币随机投给其他视频
+            if remaining_coins > 0:
+                print(f"\n🎲 开始随机投币：剩余 {remaining_coins} 个")
+                if coin_type == 1:
+                    following_list = self.get_followings(session=session, uid=uid)
+                    count = 0
+                    for following in following_list.get("data", {}).get("list"):
+                        mid = following.get("mid")
+                        if mid:
+                            tmplist, tmpcount = self.space_arc_search(session=session, uid=mid)
+                            aid_list += tmplist
+                            count += tmpcount
+                        if count > remaining_coins:
                             print("已获取足够关注用户的视频")
                             break
                 else:
                     aid_list += self.get_region(session=session)
+                
                 for one in aid_list[::-1]:
-                    print(one)
-            if coin_num > 0:
-                for aid in aid_list[::-1]:
-                    ret = self.coin_add(session=session, aid=aid.get("aid"), bili_jct=bili_jct)
-                    if ret["code"] == 0:
-                        coin_num -= 1
-                        print(f"成功给{aid.get('title')}投一个币")
+                    if remaining_coins <= 0:
+                        break
+                    ret = self.coin_add(session=session, aid=one.get("aid"), bili_jct=bili_jct)
+                    if ret.get("code") == 0:
+                        remaining_coins -= 1
                         success_count += 1
-                    elif ret["code"] == 34005:
-                        print(f"投币{aid.get('title')}失败，原因为{ret['message']}")
+                        print(f"✅ 成功给《{one.get('title')}》投币 (随机)")
+                    elif ret.get("code") == 34005:
+                        print(f"⚠️ 已投过《{one.get('title')}》，跳过")
                         continue
-                        # -104 硬币不够了 -111 csrf 失败 34005 投币达到上限
                     else:
-                        print(f"投币{aid.get('title')}失败，原因为{ret['message']}，跳过投币")
-                        break
-                    if coin_num <= 0:
-                        break
-                coin_msg = f"今日成功投币{success_count + coins_av_count}/{self.check_item.get('coin_num', 5)}个"
-            else:
-                coin_msg = f"今日成功投币{coins_av_count}/{self.check_item.get('coin_num', 5)}个"
-            aid = aid_list[0].get("aid")
-            cid = aid_list[0].get("cid")
-            title = aid_list[0].get("title")
+                        print(f"❌ 投币失败：{ret.get('message')}，跳过")
+                        continue
+            
+            coin_msg = f"今日成功投币{success_count + coins_av_count}/{coin_num}个" if remaining_coins >= 0 else f"今日成功投币{success_count + coins_av_count}/{coin_num}个 (策略：{coins_to_myself}给自己, {coin_num - coins_to_myself}随机)"
+        else:
+            coin_msg = "未登录，无法投币"
+            success_count = 0
+            coins_av_count = 0
+        
+        # 观看和分享任务
+        aid = aid_list[0].get("aid") if aid_list else 0
+        cid = aid_list[0].get("cid") if aid_list else 0
+        title = aid_list[0].get("title") if aid_list else "未知视频"
+        
+        if aid:
             report_ret = self.report_task(session=session, bili_jct=bili_jct, aid=aid, cid=cid)
             if report_ret.get("code") == 0:
                 report_msg = f"观看《{title}》300秒"
             else:
                 report_msg = "任务失败"
+            
             share_ret = self.share_task(session=session, bili_jct=bili_jct, aid=aid)
             if share_ret.get("code") == 0:
                 share_msg = f"分享《{title}》成功"
             else:
                 share_msg = "分享失败"
-                print(share_msg)
-            s2c_msg = "不兑换硬币"
-            if silver2coin:
-                silver2coin_ret = self.silver2coin(session=session, bili_jct=bili_jct)
-                s2c_msg = silver2coin_ret["message"]
-                if silver2coin_ret["code"] != 0:
-                    print(s2c_msg)
-                else:
-                    s2c_msg = ""
-            live_stats = self.live_status(session=session)
-            uname, uid, is_login, new_coin, vip_type, new_current_exp = self.get_nav(session=session)
-            today_exp = sum(map(lambda x: x["delta"], self.get_today_exp(session=session)))
-            update_data = (28800 - new_current_exp) // (today_exp if today_exp else 1)
-            msg = [
-                {"name": "帐号信息", "value": uname},
-                {"name": "漫画签到", "value": manhua_msg},
-                {"name": "直播签到", "value": live_msg},
-                {"name": "登陆任务", "value": "今日已登陆"},
-                {"name": "观看视频", "value": report_msg},
-                {"name": "分享任务", "value": share_msg},
-                {"name": "瓜子兑换", "value": s2c_msg},
-                {"name": "投币任务", "value": coin_msg},
-                {"name": "今日经验", "value": today_exp},
-                {"name": "当前经验", "value": new_current_exp},
-                {"name": "升级还需", "value": f"{update_data}天"},
-                *live_stats,
-            ]
-            msg = "\n".join([f"{one.get('name')}: {one.get('value')}" for one in msg])
-            return msg
+        else:
+            report_msg = "无视频可观看"
+            share_msg = "无视频可分享"
+        
+        s2c_msg = "不兑换硬币"
+        if silver2coin:
+            silver2coin_ret = self.silver2coin(session=session, bili_jct=bili_jct)
+            s2c_msg = silver2coin_ret["message"]
+            if silver2coin_ret["code"] != 0:
+                print(s2c_msg)
+            else:
+                s2c_msg = ""
+        
+        live_stats = self.live_status(session=session)
+        uname, uid, is_login, new_coin, vip_type, new_current_exp = self.get_nav(session=session)
+        today_exp = sum(map(lambda x: x["delta"], self.get_today_exp(session=session)))
+        update_data = (28800 - new_current_exp) // (today_exp if today_exp else 1)
+        
+        msg = [
+            {"name": "帐号信息", "value": uname},
+            {"name": "漫画签到", "value": manhua_msg},
+            {"name": "直播签到", "value": live_msg},
+            {"name": "登陆任务", "value": "今日已登陆"},
+            {"name": "观看视频", "value": report_msg},
+            {"name": "分享任务", "value": share_msg},
+            {"name": "瓜子兑换", "value": s2c_msg},
+            {"name": "投币任务", "value": coin_msg},
+            {"name": "今日经验", "value": today_exp},
+            {"name": "当前经验", "value": new_current_exp},
+            {"name": "升级还需", "value": f"{update_data}天"},
+            *live_stats,
+        ]
+        msg = "\n".join([f"{one.get('name')}: {one.get('value')}" for one in msg])
+        return msg
 
 
 if __name__ == "__main__":
@@ -417,5 +472,5 @@ if __name__ == "__main__":
         encoding="utf-8",
     ) as f:
         datas = json.loads(f.read())
-    _check_item = datas.get("BILIBILI", [])[0]
-    print(BiliBili(check_item=_check_item).main())
+        _check_item = datas.get("BILIBILI", [])[0]
+        print(BiliBili(check_item=_check_item).main())
