@@ -25,36 +25,9 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
 
-      - name: Create config.json for Tieba
+      - name: Generate Tieba Config
         run: |
-          cat > create_config.py << 'PYEOF'
-import json
-import os
-
-# 从环境变量获取 Cookie
-cookie = os.environ.get('BAIDU_TIEBA_COOKIES', '')
-
-if not cookie:
-    print('Error: BAIDU_TIEBA_COOKIES is empty!')
-    exit(1)
-
-config = {
-    'BAIDU': [
-        {
-            'cookie': cookie,
-            'checkin': True
-        }
-    ]
-}
-
-with open('config.json', 'w', encoding='utf-8') as f:
-    json.dump(config, f, indent=2, ensure_ascii=False)
-
-print('Tieba Config created:')
-with open('config.json', 'r', encoding='utf-8') as f:
-    print(f.read())
-PYEOF
-          python create_config.py
+          python scripts/create_tieba_config.py
         env:
           BAIDU_TIEBA_COOKIES: ${{ secrets.BAIDU_TIEBA_COOKIES }}
 
