@@ -34,8 +34,8 @@ jobs:
                 "cookie": "SESSDATA=${{ secrets.BILI_SESSDATA }}; bili_jct=${{ secrets.BILI_BILI_JCT }}; DedeUserID=${{ secrets.BILI_DedeUserID }}; buvid3=${{ secrets.BILI_buvid3 }}; buvid4=${{ secrets.BILI_buvid4 }}",
                 "coin_num": 5,
                 "coin_type": 1,
-                "my_video_bvid": "${{ secrets.BILI_BV_ID }}",
-                "coins_to_myself": 2,
+                "my_video_bvid": "",
+                "coins_to_myself": 0,
                 "silver2coin": false
               }
             ]
