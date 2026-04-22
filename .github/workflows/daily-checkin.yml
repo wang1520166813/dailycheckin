@@ -24,28 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run check-in
-        env:
-          # B 站 Cookie
-          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
-          BILI_BILI_JCT: ${{ secrets.BILI_BILI_JCT }}
-          BILI_DedeUserID: ${{ secrets.BILI_DedeUserID }}
-          BILI_buvid3: ${{ secrets.BILI_buvid3 }}
-          BILI_buvid4: ${{ secrets.BILI_buvid4 }}
-          # 自定义投币策略
-          BILI_BV_ID: ${{ secrets.BILI_BV_ID }}
-          
-          # 其他平台 Cookie (可选)
-          # BAIDU_TIEBA_COOKIE: ${{ secrets.BAIDU_TIEBA_COOKIE }}
-          # IQIYI_COOKIE: ${{ secrets.IQIYI_COOKIE }}
-          # SMZDM_COOKIE: ${{ secrets.SMZDM_COOKIE }}
-          
-          # 消息推送 (可选)
-          # SERVER_CHAN_KEY: ${{ secrets.SERVER_CHAN_KEY }}
-          # PUSH_PLUS_TOKEN: ${{ secrets.PUSH_PLUS_TOKEN }}
-          
+      - name: Prepare Config
         run: |
-          # 将环境变量写入 config.json (如果需要)
           python -c "
 import os
 import json
@@ -78,14 +58,13 @@ if os.getenv('BILI_buvid4'):
 # 配置投币策略
 bili_config = {
     'cookie': '; '.join(cookie_parts),
-    'coin_num': 5,  # 总共投 5 个币
-    'coin_type': 1,  # 1: 投给关注的人, 0: 随机
-    'my_video_bvid': os.getenv('BILI_BV_ID', ''),  # 你的视频 BV 号
-    'coins_to_myself': 2,  # 投给自己的数量
+    'coin_num': 5,
+    'coin_type': 1,
+    'my_video_bvid': os.getenv('BILI_BV_ID', ''),
+    'coins_to_myself': 2,
     'silver2coin': False
 }
 
-# 如果已有配置，更新它
 if len(config['BILIBILI']) > 0:
     config['BILIBILI'][0] = bili_config
 else:
@@ -97,6 +76,16 @@ with open(config_path, 'w', encoding='utf-8') as f:
 
 print('Config updated successfully')
 "
+
+      - name: Run check-in
+        env:
+          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+          BILI_BILI_JCT: ${{ secrets.BILI_BILI_JCT }}
+          BILI_DedeUserID: ${{ secrets.BILI_DedeUserID }}
+          BILI_buvid3: ${{ secrets.BILI_buvid3 }}
+          BILI_buvid4: ${{ secrets.BILI_buvid4 }}
+          BILI_BV_ID: ${{ secrets.BILI_BV_ID }}
+        run: |
           python main.py
 
       - name: Upload logs
