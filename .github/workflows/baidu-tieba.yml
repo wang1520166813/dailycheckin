@@ -27,22 +27,35 @@ jobs:
 
       - name: Create config.json for Tieba
         run: |
-          # 获取 Cookie 并转义双引号
-          COOKIE_RAW="${{ secrets.BAIDU_TIEBA_COOKIES }}"
-          COOKIE_ESCAPED=$(echo "$COOKIE_RAW" | sed 's/"/\\"/g')
-          
-          cat > config.json << EOF
-          {
-            "BAIDU": [
-              {
-                "cookie": "${COOKIE_ESCAPED}",
-                "checkin": true
-              }
-            ]
-          }
-          EOF
-          echo "Tieba Config created:"
-          cat config.json
+          python -c "
+import json
+import os
+
+# 从环境变量获取 Cookie (GitHub Actions 会自动将 Secret 注入为环境变量)
+cookie = os.environ.get('BAIDU_TIEBA_COOKIES', '')
+
+if not cookie:
+    print('Error: BAIDU_TIEBA_COOKIES is empty!')
+    exit(1)
+
+config = {
+    'BAIDU': [
+        {
+            'cookie': cookie,
+            'checkin': True
+        }
+    ]
+}
+
+with open('config.json', 'w', encoding='utf-8') as f:
+    json.dump(config, f, indent=2, ensure_ascii=False)
+
+print('Tieba Config created:')
+with open('config.json', 'r', encoding='utf-8') as f:
+    print(f.read())
+"
+        env:
+          BAIDU_TIEBA_COOKIES: ${{ secrets.BAIDU_TIEBA_COOKIES }}
 
       - name: Run Tieba Check-in
         run: |
