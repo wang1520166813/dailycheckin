@@ -26,8 +26,7 @@ jobs:
 
       - name: Create config.json
         run: |
-          cat > config.json << 'EOF'
-          {
+          echo '{
             "BILIBILI": [
               {
                 "cookie": "SESSDATA=${{ secrets.BILI_SESSDATA }}; bili_jct=${{ secrets.BILI_BILI_JCT }}; DedeUserID=${{ secrets.BILI_DedeUserID }}; buvid3=${{ secrets.BILI_buvid3 }}; buvid4=${{ secrets.BILI_buvid4 }}",
@@ -38,8 +37,7 @@ jobs:
                 "silver2coin": false
               }
             ]
-          }
-          EOF
+          }' > config.json
           echo "Config created:"
           cat config.json
 
