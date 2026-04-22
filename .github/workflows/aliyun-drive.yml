@@ -29,7 +29,7 @@ jobs:
         run: |
           python scripts/create_aliyun_config.py
         env:
-          ALYUN_DRIVE_COOKIES: ${{ secrets.ALYUN_DRIVE_COOKIES }}
+          ALYUN_REFRESH_TOKEN: ${{ secrets.ALYUN_REFRESH_TOKEN }}
 
       - name: Run Aliyun Check-in
         run: |
