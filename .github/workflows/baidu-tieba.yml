@@ -2,7 +2,7 @@ name: Baidu Tieba Check-in
 
 on:
   schedule:
-    # 每天北京时间 09:00 (UTC 01:00) 执行，与 B站 08:30 错开
+    # 每天北京时间 09:00 (UTC 01:00) 执行，与 B站错开
     - cron: '0 1 * * *'
   workflow_dispatch: # 允许手动触发
 
@@ -29,10 +29,10 @@ jobs:
         run: |
           cat > config.json << 'EOF'
           {
-            "TIEBA": [
+            "BAIDU": [
               {
-                "cookie": "${{ secrets.BAIDU_TIEBA_COOKIE }}",
-                "sign_bars": ["全部"]
+                "cookie": "${{ secrets.BAIDU_TIEBA_COOKIES }}",
+                "checkin": true
               }
             ]
           }
