@@ -2,8 +2,8 @@ name: Baidu Tieba Check-in
 
 on:
   schedule:
-    # 每天北京时间 08:35 (UTC 00:35) 执行，比 B站晚 5 分钟，避免 config.json 冲突
-    - cron: '35 0 * * *'
+    # 每天北京时间 09:00 (UTC 01:00) 执行，与 B站 08:30 错开
+    - cron: '0 1 * * *'
   workflow_dispatch: # 允许手动触发
 
 jobs:
@@ -31,8 +31,8 @@ jobs:
           {
             "TIEBA": [
               {
-                "cookie": "BDUSS=${{ secrets.BDUSS }}; STOKEN=${{ secrets.STOKEN }}; BAIDUID=${{ secrets.BAIDUID }}; TIEBAUID=${{ secrets.TIEBAUID }}; BAIDU_WISE_UID=${{ secrets.BAIDU_WISE_UID }}; __bid_n=${{ secrets.BID_N }}; __ymg_scsc=${{ secrets.YMG_SCSC }}; ab_sr=${{ secrets.AB_SR }}; BAIDUID_BFESS=${{ secrets.BAIDUID_BFESS }}; BDUSS_BFESS=${{ secrets.BDUSS_BFESS }}; RT=${{ secrets.RT }}; Hm_lpvt_049d6c0ca81a94ed2a9b8ae61b3553a5=${{ secrets.HM_LPVT }}; Hm_lvt_049d6c0ca81a94ed2a9b8ae61b3553a5=${{ secrets.HM_LVT }}; HMACCOUNT=${{ secrets.HMACCOUNT }}; IS_NEW_USER=${{ secrets.IS_NEW_USER }}; st_data=${{ secrets.ST_DATA }}; st_key_id=${{ secrets.ST_KEY_ID }}; st_sign=${{ secrets.ST_SIGN }}; TIEBA_NEW_PC=${{ secrets.TIEBA_NEW_PC }}; TIEBA_SID=${{ secrets.TIEBA_SID }}; USER_JUMP=${{ secrets.USER_JUMP }}",
-                "tbs": ""
+                "cookie": "${{ secrets.BAIDU_TIEBA_COOKIE }}",
+                "sign_bars": ["全部"]
               }
             ]
           }
