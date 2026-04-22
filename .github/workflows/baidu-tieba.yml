@@ -27,11 +27,15 @@ jobs:
 
       - name: Create config.json for Tieba
         run: |
-          cat > config.json << 'EOF'
+          # 获取 Cookie 并转义双引号
+          COOKIE_RAW="${{ secrets.BAIDU_TIEBA_COOKIES }}"
+          COOKIE_ESCAPED=$(echo "$COOKIE_RAW" | sed 's/"/\\"/g')
+          
+          cat > config.json << EOF
           {
             "BAIDU": [
               {
-                "cookie": "${{ secrets.BAIDU_TIEBA_COOKIES }}",
+                "cookie": "${COOKIE_ESCAPED}",
                 "checkin": true
               }
             ]
