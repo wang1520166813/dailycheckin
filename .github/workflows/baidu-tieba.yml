@@ -2,7 +2,7 @@ name: Baidu Tieba Check-in
 
 on:
   schedule:
-    # 每天北京时间 03:00 (UTC 19:00 前一天) 执行
+    # 每天北京时间 03:00 (UTC 19:00) 执行
     - cron: '0 19 * * *'
     # 每天北京时间 12:00 (UTC 04:00) 执行
     - cron: '0 4 * * *'
