@@ -1,0 +1,43 @@
+name: KGQQ Check-in
+
+# 全民K歌每日自动签到（签到领鲜花 + 抽奖 + 收花 + VIP福利）
+on:
+  schedule:
+    - cron: '0 6 * * *' # 每天北京时间 14:00 (UTC 06:00)，与其他签到错开
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  kgqq:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Generate KGQQ Config
+        run: |
+          python scripts/create_kgqq_config.py
+        env:
+          KGQQ_COOKIES: ${{ secrets.KGQQ_COOKIE }}
+
+      - name: Run KGQQ Check-in
+        run: |
+          dailycheckin --include KGQQ
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kgqq-logs
+          path: logs/
