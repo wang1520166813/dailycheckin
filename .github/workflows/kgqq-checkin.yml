@@ -34,6 +34,8 @@ jobs:
       - name: Run KGQQ Check-in
         run: |
           dailycheckin --include KGQQ
+        env:
+          PYTHONUNBUFFERED: 1 # 禁用输出缓冲，确保签到结果实时打印到日志
 
       - name: Upload logs
         if: always()
