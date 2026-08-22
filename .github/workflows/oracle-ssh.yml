@@ -1,0 +1,50 @@
+name: Oracle SSH Command
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: '要在甲骨文实例上执行的命令'
+        required: false
+        default: 'hostname && uname -a && uptime'
+      user:
+        description: 'SSH用户名(留空自动尝试 ubuntu/opc)'
+        required: false
+        default: ''
+
+jobs:
+  ssh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 配置SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/oracle_key
+          chmod 600 ~/.ssh/oracle_key
+          ssh-keyscan -H ${{ secrets.ORACLE_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "keyscan失败,使用严格模式关闭"
+
+      - name: 执行命令
+        env:
+          CMD: ${{ github.event.inputs.command }}
+          USER_INPUT: ${{ github.event.inputs.user }}
+        run: |
+          if [ -n "$USER_INPUT" ]; then
+            USERS="$USER_INPUT"
+          else
+            USERS="ubuntu opc"
+          fi
+          SUCCESS=0
+          for u in $USERS; do
+            echo "==> 尝试用户: $u"
+            if ssh -i ~/.ssh/oracle_key \
+                  -o StrictHostKeyChecking=no \
+                  -o ConnectTimeout=20 \
+                  -o ServerAliveInterval=10 \
+                  "$u@${{ secrets.ORACLE_HOST }}" \
+                  "echo '=== 连接成功 ==='; echo \$CMD | bash"; then
+              SUCCESS=1
+              break
+            fi
+          done
+          [ $SUCCESS -eq 1 ] || { echo '::error::所有用户均连接失败'; exit 1; }
