@@ -1,0 +1,29 @@
+name: Baidu Tieba Check-in (Migrated)
+
+on:
+  schedule:
+    - cron: '0 19 * * *'
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  tieba:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+      - run: python scripts/create_tieba_config.py
+        env:
+          BAIDU_TIEBA_COOKIES: ${{ secrets.BAIDU_TIEBA_COOKIES }}
+      - run: dailycheckin --include TIEBA
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tieba-logs-migrated
+          path: logs/
