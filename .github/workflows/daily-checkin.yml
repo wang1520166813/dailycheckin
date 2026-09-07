@@ -41,12 +41,9 @@ jobs:
             ]
           }
           EOF
-          echo "Config created:"
-          cat config.json
 
       - name: Run check-in
-        run: |
-          dailycheckin
+        run: dailycheckin
 
       - name: Upload logs
         if: always()
@@ -54,3 +51,4 @@ jobs:
         with:
           name: checkin-logs
           path: logs/
+# Re-enabled during Qinglong migration on 2026-09-08
